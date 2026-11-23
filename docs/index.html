@@ -82,6 +82,14 @@
     </ul>
   </section>
 
+  <section id="story">
+    <h2>Why I built this</h2>
+    <p>From my first year of college, my university email filled up with circulars, notices, newsletters and group mail. Like most students, I never cleaned it out.</p>
+    <p>Then, in my final year, we were told to bring our Google storage under a limit set by the college. That meant clearing out years of email. Moving it all to Trash was the easy part. Emptying Trash was not: every attempt at <b>Delete forever</b> ended in “An error occurred”, and deleting 100 at a time would have taken days.</p>
+    <p>So I wrote a script to do it for me. If you're a student facing a storage deadline, or anyone with a Trash that won't empty, I hope it saves you the same headache.</p>
+    <p style="color:var(--muted)">— Chandana</p>
+  </section>
+
   <section id="setup">
     <h2>Set it up</h2>
     <ol class="steps">
@@ -118,6 +126,8 @@
       <p>It does. Use this when you need the storage back now, or want Trash cleared on your own schedule.</p></details>
     <details><summary>How do I remove it later?</summary>
       <p>Run <code>removeAllTriggers</code>, delete the project, and optionally revoke access at <a href="https://myaccount.google.com/connections" target="_blank" rel="noopener">Google Account → Third-party connections</a>.</p></details>
+    <details><summary>Does it work on a college or work (Google Workspace) account?</summary>
+      <p>Yes, that's what it was built for. Some institutions block Apps Script or the Gmail API for student accounts. If you can't create a project or add the Gmail service, your administrator has turned it off.</p></details>
     <details><summary>It hit a quota error.</summary>
       <p>Gmail limits API use per day. Try again tomorrow; it picks up where it left off.</p></details>
   </section>

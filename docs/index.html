@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Gmail Bulk Trash Purger — empty a huge Gmail Trash without errors</title>
+<meta name="description" content="A free Google Apps Script that permanently deletes thousands of emails from Gmail Trash without the 'An error occurred' timeout. Runs in your own account.">
+<meta property="og:title" content="Gmail Bulk Trash Purger">
+<meta property="og:description" content="Empty a Gmail Trash with 10,000+ emails in minutes. Free, open source, runs in your own Google account.">
+<style>
+  :root{
+    --bg:#fbfaf7; --ink:#1d1d1b; --muted:#5f5e58; --line:#e4e1d8;
+    --accent:#c2410c; --accent-ink:#fff; --card:#fff; --code:#16161a; --warn:#fff4e5;
+  }
+  @media (prefers-color-scheme: dark){
+    :root{ --bg:#141412; --ink:#eeece6; --muted:#a3a197; --line:#2c2b27;
+      --card:#1c1b18; --code:#0c0c0e; --warn:#2a1f12; --accent:#f97316; --accent-ink:#141412; }
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);
+    font:17px/1.6 ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+  a{color:var(--accent)}
+  .wrap{max-width:760px;margin:0 auto;padding:0 22px}
+  header{padding:72px 0 40px;border-bottom:1px solid var(--line)}
+  .eyebrow{font:600 13px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.08em;
+    text-transform:uppercase;color:var(--muted)}
+  h1{font-size:clamp(32px,6vw,50px);line-height:1.08;letter-spacing:-.02em;margin:14px 0 16px}
+  h1 s{color:var(--muted);text-decoration-thickness:3px}
+  .lead{font-size:19px;color:var(--muted);max-width:60ch;margin:0 0 28px}
+  .btns{display:flex;gap:12px;flex-wrap:wrap}
+  .btn{display:inline-block;padding:12px 18px;border-radius:8px;font-weight:600;text-decoration:none;
+    border:1px solid var(--line);color:var(--ink);background:var(--card);cursor:pointer;font-size:16px}
+  .btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+  section{padding:44px 0;border-bottom:1px solid var(--line)}
+  h2{font-size:24px;letter-spacing:-.01em;margin:0 0 16px}
+  .error{font-family:ui-monospace,Menlo,monospace;font-size:14px;background:var(--card);
+    border:1px solid var(--line);border-left:3px solid #d93025;padding:10px 14px;border-radius:6px;display:inline-block}
+  ul.facts{padding-left:20px} ul.facts li{margin:6px 0}
+  ol.steps{counter-reset:s;list-style:none;padding:0;margin:0}
+  ol.steps>li{counter-increment:s;position:relative;padding:0 0 22px 52px}
+  ol.steps>li::before{content:counter(s);position:absolute;left:0;top:0;width:34px;height:34px;border-radius:50%;
+    display:grid;place-items:center;font-weight:700;background:var(--ink);color:var(--bg);font-size:15px}
+  ol.steps h3{margin:4px 0 4px;font-size:18px}
+  ol.steps p{margin:0;color:var(--muted)}
+  code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:.88em;
+    background:var(--card);border:1px solid var(--line);padding:1px 5px;border-radius:4px}
+  .warn{background:var(--warn);border:1px solid var(--line);border-radius:8px;padding:14px 16px;margin:8px 0 0}
+  .codebox{position:relative;margin-top:14px}
+  .codebox pre{background:var(--code);color:#e7e5df;border-radius:10px;padding:18px;overflow:auto;
+    max-height:420px;font:13px/1.55 ui-monospace,SFMono-Regular,Menlo,monospace;margin:0}
+  .codebox .btn{position:absolute;top:10px;right:10px;padding:6px 12px;font-size:13px}
+  details{border:1px solid var(--line);border-radius:8px;background:var(--card);padding:12px 16px;margin:10px 0}
+  summary{cursor:pointer;font-weight:600}
+  details p{color:var(--muted);margin:8px 0 2px}
+  footer{padding:32px 0 60px;color:var(--muted);font-size:14px}
+</style>
+</head>
+<body>
+<header>
+  <div class="wrap">
+    <div class="eyebrow">Free · Open source · Google Apps Script</div>
+    <h1>Empty a 10,000-email Gmail Trash <s>in hours</s> in minutes.</h1>
+    <p class="lead">Gmail's “Delete forever” button chokes on a big Trash. This small script runs inside your own Google account and clears it in batches. There's nothing to install, no server, and nobody else sees your mail.</p>
+    <div class="btns">
+      <a class="btn primary" href="#setup">Set it up (3 min)</a>
+      <a class="btn" href="https://github.com/chandana-galgali/gmail-bulk-trash-purger">View on GitHub</a>
+    </div>
+  </div>
+</header>
+
+<main class="wrap">
+  <section>
+    <h2>Sound familiar?</h2>
+    <p>You select all conversations in Trash, click <b>Delete forever</b>, and get:</p>
+    <p class="error">⚠ An error occurred</p>
+    <p>Then you're stuck deleting 50 at a time, page after page. This script does the deleting for you.</p>
+    <ul class="facts">
+      <li><b>Fast:</b> deletes 500 messages per API call.</li>
+      <li><b>Safe by design:</b> only ever reads the Trash label, and has a dry-run mode.</li>
+      <li><b>One click:</b> if your Trash is huge, it schedules itself to keep going until it's empty.</li>
+      <li><b>Optional autopilot:</b> clear Trash daily so it never piles up again.</li>
+    </ul>
+  </section>
+
+  <section id="setup">
+    <h2>Set it up</h2>
+    <ol class="steps">
+      <li><h3>Create a project</h3>
+        <p>Open <a href="https://script.google.com/home" target="_blank" rel="noopener">script.google.com</a> and click <b>New project</b>.</p></li>
+      <li><h3>Paste the code</h3>
+        <p>Replace everything in <code>Code.gs</code> with the script below, then save.</p></li>
+      <li><h3>Turn on the Gmail API</h3>
+        <p>Click <b>+</b> next to <b>Services</b> in the sidebar, choose <b>Gmail API</b>, and click <b>Add</b>.</p></li>
+      <li><h3>Dry run</h3>
+        <p>Pick <code>countTrash</code> in the function menu and click <b>Run</b>. Approve the permissions (Google calls your own script “unverified”, so choose <b>Advanced → Go to … → Allow</b>). The log shows how much is in Trash, and nothing is deleted.</p></li>
+      <li><h3>Empty it</h3>
+        <p>Pick <code>autoEmptyTrash</code> and click <b>Run</b>. You can close the tab, and it carries on by itself until it's done.</p></li>
+    </ol>
+    <div class="warn"><b>Heads up:</b> deletion is permanent. Anything in Trash when you run it is gone for good.</div>
+
+    <div class="codebox">
+      <button class="btn" id="copy" type="button">Copy</button>
+      <pre id="code">Loading the latest script…</pre>
+    </div>
+    <p style="font-size:14px;color:var(--muted)">Loaded live from <a id="src" href="https://github.com/chandana-galgali/gmail-bulk-trash-purger/blob/main/src/Code.gs">src/Code.gs</a> on GitHub.</p>
+  </section>
+
+  <section>
+    <h2>Keep it clean automatically</h2>
+    <p>Run <code>installDailyTrigger</code> once and Trash is emptied every night. Run <code>removeAllTriggers</code> to stop. Want an undo window? Set <code>EXTRA_QUERY: 'older_than:7d'</code> at the top of the script.</p>
+  </section>
+
+  <section>
+    <h2>Questions</h2>
+    <details><summary>Why does it need access to “all your email”?</summary>
+      <p>Google only allows permanent deletion under the full Gmail scope; there's no narrower option. The script only lists and deletes messages labelled Trash, it runs as you, and it sends nothing anywhere. The whole thing is about 150 readable lines.</p></details>
+    <details><summary>Doesn't Gmail empty Trash after 30 days anyway?</summary>
+      <p>It does. Use this when you need the storage back now, or want Trash cleared on your own schedule.</p></details>
+    <details><summary>How do I remove it later?</summary>
+      <p>Run <code>removeAllTriggers</code>, delete the project, and optionally revoke access at <a href="https://myaccount.google.com/connections" target="_blank" rel="noopener">Google Account → Third-party connections</a>.</p></details>
+    <details><summary>It hit a quota error.</summary>
+      <p>Gmail limits API use per day. Try again tomorrow; it picks up where it left off.</p></details>
+  </section>
+</main>
+
+<footer class="wrap">
+  Made by Chandana Galgali · MIT License · Not affiliated with Google.
+</footer>
+
+<script>
+  (function(){
+    var RAW = 'https://raw.githubusercontent.com/chandana-galgali/gmail-bulk-trash-purger/main/src/Code.gs';
+    var pre = document.getElementById('code'), btn = document.getElementById('copy');
+    fetch(RAW).then(function(r){ if(!r.ok) throw 0; return r.text(); })
+      .then(function(t){ pre.textContent = t; })
+      .catch(function(){ pre.textContent = 'Could not load the script here. Open src/Code.gs on GitHub instead (link below).'; btn.style.display='none'; });
+    btn.addEventListener('click', function(){
+      navigator.clipboard.writeText(pre.textContent).then(function(){
+        btn.textContent = 'Copied ✓'; setTimeout(function(){ btn.textContent = 'Copy'; }, 1800);
+      }, function(){ btn.textContent = 'Select & copy manually'; });
+    });
+  })();
+</script>
+</body>
+</html>

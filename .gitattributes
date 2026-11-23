@@ -1,0 +1,2 @@
+# Store text files with LF line endings in the repo (fixes CRLF "modified" noise on Windows)
+* text=auto eol=lf

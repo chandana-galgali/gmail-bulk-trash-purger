@@ -1,0 +1,6 @@
+# clasp (local Apps Script CLI) - holds your personal script ID
+.clasp.json
+.clasprc.json
+node_modules/
+.DS_Store
+Thumbs.db

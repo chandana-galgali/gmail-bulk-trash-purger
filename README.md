@@ -1,60 +1,144 @@
 # Gmail Bulk Trash Purger
 
-A lightweight, automated Google Apps Script solution to permanently delete thousands of emails from your Gmail Trash without encountering server timeout errors.
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](./LICENSE)
+![Google Apps Script](https://img.shields.io/badge/Google%20Apps%20Script-V8-4285F4?logo=google&logoColor=white)
 
-## The Problem (Background)
-When your Gmail Trash builds up to thousands of messages (e.g., 5,000 to 10,000+ emails), attempting to use the default web interface option **"Select all conversations in Trash" -> "Delete forever"** frequently fails. 
+**Permanently delete thousands of emails from your Gmail Trash in minutes, without the "An error occurred" timeout.**
 
-Because of the massive data payload, Google's servers time out, throwing a generic **"An error occurred"** message. Users are then forced to manually delete emails page-by-page (50 to 100 at a time), which requires repetitive clicking and hours of manual work.
+A small Google Apps Script that runs inside your own Google account. You don't need to install anything, there's no server, and no third party ever sees your mail.
 
-## The Solution
-This repository provides a simple, secure Google Apps Script that automates the deletion process. It fetches your trash threads in stable, smaller batches (50 at a time), unpacks the individual messages, and purges them via the official Gmail API. It also includes error handling to safely skip messages that have already been deleted, preventing script crashes.
+**Website:** https://chandana-galgali.github.io/gmail-bulk-trash-purger/
 
-The complete automated script can be found in the [Code.gs](./Code.gs) file in this repository.
+---
 
-## Prerequisites
-Before setting up the script, make sure you have:
-* A Google/Gmail account.
-* A desktop web browser to access the Google Apps Script console.
+## The problem
 
-## Setup Instructions
+Once Gmail Trash holds thousands of messages, **Select all conversations in Trash → Delete forever** usually fails with a generic *"An error occurred"*. That leaves you deleting 50–100 emails a page, by hand, for hours.
 
-### Step 1: Create a New Script Project
-1. Open the [Google Apps Script Dashboard](https://google.com).
-2. Click the **New Project** button in the top left corner.
-3. Rename the project from *Untitled project* to `Gmail Bulk Trash Purger`.
+## What this does
 
-### Step 2: Add the Code
-1. Erase any code automatically generated in the editor (`Code.gs`).
-2. Copy the full script layout from the [Code.gs](./Code.gs) file in this repository.
-3. Paste the code directly into your Google Apps Script editor.
+- Reads **only the Trash label** and permanently deletes what it finds, 500 messages per API call.
+- Runs a **dry run** (`countTrash`) so you can see how much is there before deleting anything.
+- Stops cleanly before Google's **6-minute** script limit, then **schedules itself to continue** until Trash is empty. You click Run once.
+- Can run **every day** automatically so Trash never builds up again.
+- Can optionally keep recent trash (for example, only delete items older than 7 days).
 
-### Step 3: Enable the Gmail API Service
-The script utilizes advanced Google services to bypass standard thread limitations.
-1. In the left sidebar of the Apps Script editor, click the **+ (Plus sign)** next to **Services**.
-2. Scroll down and select **Gmail API**.
-3. Keep the identifier as `Gmail` and click **Add**.
+> ⚠️ **Deletion is permanent.** Anything removed by this script cannot be recovered from Trash. Check `countTrash()` first and make sure there's nothing in Trash you want back.
 
-### Step 4: Save and Authorize
-1. Click the **Save (Floppy Disk icon)** at the top of the editor.
-2. Click the **Run (Play button)** icon.
-3. A prompt will appear saying authorization is required. Click **Review permissions**.
-4. Choose your Gmail account.
-5. Google will display an "unverified app" security warning because you are running your own custom script. Click **Advanced** at the bottom, then click **Go to Gmail Bulk Trash Purger (unsafe)**.
-6. Click **Allow** on the final screen.
+---
 
-## Execution and Limits
-* **Execution Time:** Google Apps Script limits a single execution run to **6 minutes**. If you have an exceptionally massive trash folder, the script may time out before finishing.
-* **What to do if it times out:** Simply click the **Run** button again. It will pick up right where it left off until your Trash is completely empty.
+## Quick start (about 3 minutes)
 
-## Optional: Automate Daily Maintenance
-If you want this script to automatically clean your trash folder every single day so it never builds up again:
-1. Click the **Triggers (Alarm Clock icon)** on the left sidebar.
-2. Click **Add Trigger** in the bottom right corner.
-3. Under *Choose which function to run*, select `autoEmptyTrash`.
-4. Under *Select event source*, choose **Time-driven**.
-5. Under *Select type of time-based trigger*, choose **Day timer**.
-6. Select your preferred time window (e.g., Midnight to 1am) and click **Save**.
+### 1. Create the project
+1. Go to **[script.google.com](https://script.google.com/home)** and click **New project**.
+2. Rename it from *Untitled project* to `Gmail Bulk Trash Purger`.
+
+### 2. Paste the code
+1. Delete the placeholder code in `Code.gs`.
+2. Copy everything from [`src/Code.gs`](./src/Code.gs) and paste it in.
+3. Click **Save** (💾).
+
+### 3. Turn on the Gmail API service
+1. In the left sidebar, click **+** next to **Services**.
+2. Choose **Gmail API**, leave the identifier as `Gmail`, and click **Add**.
+
+### 4. Dry run
+1. In the function dropdown at the top, select **`countTrash`** and click **Run**.
+2. Approve the permissions prompt (see [Permissions](#permissions-and-privacy) below). Google warns that the app is unverified because it's your own private script. Click **Advanced → Go to Gmail Bulk Trash Purger (unsafe) → Allow**.
+3. Open **Execution log** to see how many messages are in Trash. Nothing has been deleted yet.
+
+### 5. Empty the Trash
+1. Select **`autoEmptyTrash`** and click **Run**.
+2. Watch the log. If your Trash is too large to clear in one go, the script schedules itself to carry on about a minute later, and keeps doing so until Trash is empty. You can close the tab.
+
+That's it.
+
+---
+
+## Optional: keep Trash empty automatically
+
+Select **`installDailyTrigger`** and click **Run**. From then on the script empties Trash once a day (by default around 02:00 in the project's time zone; set the time zone under ⚙️ **Project Settings**).
+
+To stop it, run **`removeAllTriggers`**.
+
+> Tip: if you like having a few days to undo deletions, set `EXTRA_QUERY: 'older_than:7d'` in the settings before installing the daily trigger. Note that Gmail's `older_than` looks at the email's date, not the date you trashed it.
+
+## Settings
+
+At the top of `Code.gs`:
+
+| Setting | Default | What it does |
+|---|---|---|
+| `EXTRA_QUERY` | `''` | Gmail search filter applied *within* Trash, e.g. `older_than:30d`, `from:newsletter@example.com`. Empty means everything. |
+| `MAX_RUNTIME_MS` | 5 min | When to stop a run, safely under Google's 6-minute limit. |
+| `AUTO_CONTINUE` | `true` | Automatically schedule another run if Trash isn't empty yet. Set `false` to just click Run again yourself. |
+| `DAILY_HOUR` | `2` | Hour (0–23) used by `installDailyTrigger`. |
+| `PAGE_SIZE` | `500` | Messages per request (500 is Gmail's maximum). |
+
+## Functions
+
+| Function | Deletes mail? | Purpose |
+|---|---|---|
+| `countTrash` | No | Dry run: counts what would be deleted. |
+| `autoEmptyTrash` | **Yes** | Permanently empties Trash (respecting `EXTRA_QUERY`). |
+| `installDailyTrigger` | No (schedules it) | Runs `autoEmptyTrash` daily. |
+| `removeAllTriggers` | No | Removes every scheduled run created by this project. |
+
+---
+
+## Permissions and privacy
+
+The script asks for two permissions:
+
+- **Read, compose, send and permanently delete all your email** (`https://mail.google.com/`). Google only offers *permanent* deletion under this full-access scope; there's no narrower one. The code only ever lists and deletes messages carrying the **Trash** label. You can read every line of it in [`src/Code.gs`](./src/Code.gs). It's about 150 lines, half of them comments.
+- **Manage triggers** (`script.scriptapp`), used only to schedule continuation runs and the optional daily run.
+
+The script runs **as you, inside your Google account**. Nothing is sent anywhere else. The "unverified app" warning appears because the project is yours and hasn't been through Google's review; it isn't a sign of anything wrong. To revoke access later, go to [Google Account → Third-party connections](https://myaccount.google.com/connections), or just delete the project.
+
+## FAQ
+
+**Doesn't Gmail empty Trash by itself?**
+Yes, after 30 days. This is for when you need the storage back *now*, or when you want Trash cleared on your own schedule.
+
+**Is it safe to run repeatedly?**
+Yes. If Trash is already empty it logs "Done" and exits.
+
+**It said "Deletion appears stuck".**
+The same messages kept coming back after a delete. Wait a few minutes (Gmail can briefly rate-limit) and run again. If it persists, please open an issue with the execution log.
+
+**Does it touch Spam?**
+No. Only the Trash label.
+
+**I hit "Service invoked too many times" / a quota error.**
+Free Gmail accounts have a daily Gmail API quota. Leave it until tomorrow; the next run picks up where it stopped.
+
+---
+
+## For developers
+
+The `src/` folder is a ready-made [clasp](https://github.com/google/clasp) project (`appsscript.json` already enables the Gmail service and declares scopes):
+
+```bash
+npm install -g @google/clasp
+clasp login
+clasp create --type standalone --title "Gmail Bulk Trash Purger" --rootDir src
+clasp push
+```
+
+## Project layout
+
+```
+.
+├── src/
+│   ├── Code.gs            # the script (this is all most people need)
+│   └── appsscript.json    # manifest: Gmail advanced service + scopes
+├── docs/
+│   └── index.html         # GitHub Pages site
+├── CHANGELOG.md
+├── LICENSE
+└── README.md
+```
 
 ## License
-This project is open-source and available under the MIT License.
+
+[MIT](./LICENSE) © 2026 Chandana Galgali
